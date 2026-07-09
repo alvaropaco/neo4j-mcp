@@ -73,11 +73,14 @@ class Neo4jManager:
         parameters: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Execute a write transaction."""
+        async def _run(tx: Any) -> list[dict[str, Any]]:
+            result = await tx.run(query, parameters or {})
+            records = await result.data()
+            await result.consume()
+            return records
+
         async with self.session() as sess:
-            result = await sess.execute_write(
-                lambda tx: tx.run(query, parameters or {}).data()
-            )
-            return result
+            return await sess.execute_write(_run)
 
     async def get_schema_info(self) -> dict[str, Any]:
         """Introspect the database schema: labels, rel types, indexes."""
